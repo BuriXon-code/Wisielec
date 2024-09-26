@@ -1,0 +1,208 @@
+#!/bin/bash
+
+max_attempts=7
+attempts=0
+guessed_letters=()
+hidden_word=""
+current_word=""
+game_over=false
+
+reset="\e[0m"
+green="\e[1;32m"
+red="\e[1;31m"
+yellow="\e[1;33m"
+cyan="\e[1;36m"
+
+abort() {
+	echo -e "\n\e[1;32mDziekuje za gre :)\nDo zobaczenia!\n"
+	exit 0
+}
+
+help() {
+	echo -e "\nUzycie: ${green}wisielec ${yellow}[${green}parametr${yellow}]           ${red}O  ${yellow}_________________  "
+	echo -e "                 [${green}-m${yellow}|${green}--mix${yellow}]          ${red}/|\\  ${yellow}\\ ${cyan}TROSZKE NIZEJ ${yellow}\\ "
+	echo -e "                 [${green}-k${yellow}|${green}--komputery${yellow}]    ${red}/ \\  ${yellow}|  ${cyan}WIECEJ INFO${yellow}   | "
+	echo -e "                 [${green}-p${yellow}|${green}--panstwa${yellow}]           ${yellow}| ${cyan}O KATEGORIACH${yellow}  | "
+	echo -e "                 [${green}-r${yellow}|${green}--rosliny${yellow}]            ${yellow}\\______________/   "
+	echo -e "                 [${green}-i${yellow}|${green}--imiona${yellow}]"
+	echo -e "                 [${green}-t${yellow}|${green}--technika${yellow}]"
+	echo -e "                 [${green}-n${yellow}|${green}--nauka${yellow}]"
+	echo -e "                 [${green}-z${yellow}|${green}--zwierzeta${yellow}]"
+	echo -e "                 [${green}-f${yellow}|${green}--file ${yellow}] <${green}plik${yellow}>"
+	echo -e "                 [${green}-h${yellow}|${green}--help${yellow}]"
+	echo -e "                 ${reset}\n\n"
+	echo -e "${reset}W kategorii ${green}mix${reset} znajduje się ponad ${red}1.5mln${reset} slow\nz roznych kategorii i tematow w jezyku polskim."
+	echo -e "Kategoria ${green}mix${reset} jest ${red}domyslna${reset} i wybierana zostaje\nrowniez przy braku innych parametrow.\n"
+	echo -e "${reset}W kategorii ${green}komputery${reset} znajduje się ${red}110+${reset} slow\ndotyczacych szerokopojetej techniki komputerowej.\n"
+	echo -e "${reset}W kategorii ${green}panstwa${reset} znajduje się ${red}250+${reset} slow\nbedacych nazwami panstw oraz ich stolic.\n"
+	echo -e "${reset}W kategorii ${green}rosliny${reset} znajduje się ${red}170+${reset} slow\nbedacych nazwami roslin, owocow, warzyw itp.\n"
+	echo -e "${reset}W kategorii ${green}imiona${reset} znajduje się ${red}130+${reset} slow\nbedacych popularnymi imionami w jezyku polskim.\n"
+	echo -e "${reset}W kategorii ${green}technika${reset} znajduje się ${red}350+${reset} slow\nzwiazanych z szerokopojeta technika.\n"
+	echo -e "${reset}W kategorii ${green}nauka${reset} znajduje się ${red}260+${reset} slow\nzwiazanych z naukami scislymi i medycyna.\n"
+	echo -e "${reset}W kategorii ${green}zwierzeta${reset} znajduje się ${red}390+${reset} slow\nbedacych nazwami zwierzat i owadow.\n"
+	echo -e "${reset}Parametr ${green}-f ${reset}|${green} --file${reset} pozwala uzytkownikowi\nwybrac ${red}wlasny plik${reset} ze slowami do gry."
+	echo -e "Wybierajac wlasny plik nalezy podac ${green}sciezke${reset}\ndo pliku jako ${red}drugi parametr${reset} komendy.\n\n"
+	echo -e "Gra polega na ${green}odgadnieciu wylosowanego slowa${reset}\nna podstawie znanej ilosci liter w slowie."
+	echo -e "Gracz może pomylić się ${red}7 razy${reset} zanim gra\nzakonczy sie ${red}przegrana${reset} gracza.\n\n"
+	echo -e "${red}UWAGA : ${reset}gra nie obsluguje ${yellow}polskich znakow${reset}.\nUzycie pliku zawierajacego polskie znaki moze\nuczynic poszczegolne rozgrywki ${red}nierozgrywalnymi${reset}!"
+	echo -e "\n\n${green}Zycze milej gry i dobrej zabawy :)${reset}\n"
+}
+
+filename="${WISIELEC}/mix"
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		-k | --komputery)
+			filename="$WISIELEC/komputery"
+			shift
+			shift
+			;; 
+		-m | --mix)
+			filename="$WISIELEC/mix"
+			shift
+			shift
+			;;
+		-p | --panstwa)
+			filename="$WISIELEC/panstwa"
+			shift
+			shift
+			;;
+		-r | --rosliny)
+                        filename="$WISIELEC/rosliny"
+			shift
+			shift
+                        ;;
+		-z | --zwierzęta)
+			filename="$WISIELEC/zwierzeta"
+			shift
+			shift
+			;;
+		-i | --imiona)
+			filename="$WISIELEC/imiona"
+			shift
+			shift
+			;;
+		-n | --nauka)
+			filename="$WISIELEC/nauka"
+			shift
+			shift
+			;;
+		-t | --technika)
+			filename="$WISIELEC/technika"
+			shift
+			shift
+			;;
+		-f | --file)
+			filename="$(pwd)/$2"
+			shift
+			shift
+			;;
+		-h | --help)
+			help
+			exit 0
+			;;
+		-* | --*)
+			echo -e "\n\e[31mNieprawidłowa opcja $1!\e[0m"
+			help
+			echo -e "\n${yellow}Pamietaj, ze ${green}-h ${yellow}|${green} --help${yellow} jest Twoim przyjacielem ${reset}:${red})${reset}\n"
+			exit 1
+			;;
+		*)
+			echo "\n\e[31mNieprawidłowy parametr $1!\e[0m"
+			help
+			echo -e "\n${yellow}Pamietaj, ze ${green}-h ${yellow}|${green} --help${yellow} jest Twoim przyjacielem ${reset}:${red})${reset}\n"
+			exit 1
+			;;
+	esac
+done
+
+select_word() {
+	local count=$(wc -l "$filename" | cut -d' ' -f1)
+	local index=$(( RANDOM % count ))
+	head -n $index "$filename" | tail -n 1
+}
+
+update_current_word() {
+	current_word=""
+	for ((i=0; i<${#hidden_word}; i++)); do
+		letter="${hidden_word:$i:1}"
+		if [[ " ${guessed_letters[@]} " =~ " $letter " ]]; then
+			current_word+="$letter "
+		else
+			current_word+="_ "
+		fi
+	done
+}
+
+display_word() {
+	update_current_word
+	echo -e "${cyan}${current_word}${reset}"
+}
+
+draw_hangman() {
+	case $attempts in
+		1) echo -e "\n${red}  O ${reset}\n" ;;
+		2) echo -e "\n${red}  O ${reset}"
+		echo -e "${red}  | ${reset}\n" ;;
+		3) echo -e "\n${red}  O ${reset}"
+		echo -e "${red} /| ${reset}\n" ;;
+		4) echo -e "\n${red}  O ${reset}"
+		echo -e "${red} /|\\ ${reset}\n" ;;
+		5) echo -e "\n${red}  O ${reset}"
+		echo -e "${red} /|\\ ${reset}"
+		echo -e "${red} / ${reset}\n" ;;
+		6) echo -e "\n${red}  O ${reset}"
+		echo -e "${red} /|\\ ${reset}"
+		echo -e "${red} / \\ ${reset}"
+		echo -e "\n${red}OSTATNIA SZANSA!${reset}\n" ;;
+		7) echo -e "\n${red}  O ${reset}"
+		echo -e "${red} /|\\ ${reset}"
+    		echo -e "${red} / \\ ${reset}"
+		echo -e "\n${red}KONIEC...${reset}\n" ;;
+	esac
+}
+
+word=$(select_word)
+hidden_word=$(echo "$word" | tr -d '[:space:]') # Remove spaces
+guessed_letters=()
+
+while [[ $attempts -lt $max_attempts && $game_over == false ]]; do
+	clear
+	echo -e "\n${yellow}Odgadnij slowo:${reset}"
+	display_word
+	draw_hangman
+	echo -e "\n${yellow}Pozostalo bledow: $((max_attempts - attempts))${reset}"
+	echo -en "\nPodaj litere: "
+	read -n1 guess
+	echo
+
+	if ! [[ "$guess" =~ ^[a-zA-Z]$ ]]; then
+		echo -e "${red}Nieprawidlowy znak. Wymagane symbole lacinskie.${reset}"
+		sleep 0.5
+		continue
+	fi
+
+	if [[ " ${guessed_letters[@]} " =~ " $guess " ]]; then
+		echo -e "${red}Powtorka : '$guess'.${reset}"
+		sleep 0.5
+		continue
+	fi
+
+	guessed_letters+=("$guess")
+
+	if [[ "$hidden_word" =~ $guess ]]; then
+		update_current_word
+		if [[ "$(echo "$current_word" | tr -d ' ')" == "$hidden_word" ]]; then
+			game_over=true
+			clear
+			echo -e "\n${green}GRATULACJE! Odgadles/as slowo: $word${reset}\n"
+		fi
+	else
+		((attempts++))
+	if [[ $attempts -eq $max_attempts ]]; then
+		clear
+		echo -e "\n${red}GAME OVER! Slowo to : $word${reset}\n"
+		game_over=true
+	fi
+fi
+done
