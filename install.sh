@@ -197,7 +197,7 @@ check_shell() {
 
 download_file() {
 	{
-		FILE_URL="https://burixon.com.pl/github/Wisielec/slowa.tar.xz"
+		FILE_URL="https://burixon.com.pl/projekty/Wisielec/slowa.tar.xz"
 		TARGET_FILE="slowa.tar.xz"
 		sleep 0.5
 		wget -q --limit-rate=750k "$FILE_URL" -O "$TARGET_FILE" && return 0 || return 1
