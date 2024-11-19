@@ -74,7 +74,7 @@ mkdir /path/to/directory/ && cd /path/to/directory/
 ```
 ```
 # Pobieranie plików ze słowami:
-wget https://burixon.com.pl/github/Wisielec/slowa.tar.xz
+wget https://burixon.com.pl/pliki/slowa.tar.xz
 ```
 ```
 # Rozpakowywanie pierwiastków:
