@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Hangman game made by BuriXon-code (c) 2025
+
 max_attempts=7
 attempts=0
 guessed_letters=()
